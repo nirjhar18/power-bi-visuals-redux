@@ -16,6 +16,15 @@ export default function chartReducer(state = initialState, action) {
       return produce(state, (draft) => {
         draft.LayoutShowcaseState.layoutVisuals = action.visuals;
       });
+    case types.UPDATE_LAYOUT_COLUMNS:
+      return produce(state, (draft) => {
+        draft.LayoutShowcaseState.columns = action.columns;
+        draft.columns = action.columns;
+      });
+    case types.REMOVE_VISUAL_STATE:
+      return produce(state, (draft) => {
+        draft.LayoutShowcaseState.layoutVisuals = null;
+      });
 
     default:
       return state;
