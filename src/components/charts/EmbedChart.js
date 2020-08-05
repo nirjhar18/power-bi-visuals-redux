@@ -1,23 +1,60 @@
 import React from "react";
 import { connect } from "react-redux";
 import * as chartsActions from "../../redux/actions/chartActions";
+import * as tokenActions from "../../redux/actions/tokenActions";
 import PropTypes from "prop-types";
 import { bindActionCreators } from "redux";
 import { PowerBIEmbed } from "powerbi-client-react";
 import { models } from "powerbi-client";
 import "../../App.css";
+import { debounce } from "lodash";
 
+let state = null;
 let EMBED_URL =
   "https://app.powerbi.com/reportEmbed?reportId=43522fc4-19b1-4ff4-b6b3-8bb22e1ad757&config=eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVdFU1QtVVMtcmVkaXJlY3QuYW5hbHlzaXMud2luZG93cy5uZXQiLCJlbWJlZEZlYXR1cmVzIjp7Im1vZGVybkVtYmVkIjp0cnVlfX0%3d";
 let REPORT_ID = "43522fc4-19b1-4ff4-b6b3-8bb22e1ad757";
 let EMBED_TOKEN =
-  "H4sIAAAAAAAEACXSx66DVgAE0H95WyKZcmmRsqD33tldDDbNdDAQ5d_zokizGWlWR_P3jwuvfoTlz58_ThFd2skcvoeBXMpYGkNqKe9UHYLAsXKxLJEkRzhYFjkn0eRZvHeFM7pE25_sA2yLuOC3kK7UUwm3OAhx9sXtL5krPSjA7_XtxAR20lgsReJCAWsxAu1AQDTZNQTBa-lhYPezLwoT7EXB6cEVGAReGS4U1eI8bYigm4iQg1yh-4zYsqvkalSFgNQPXt3pW6VKlkwZEHNtqpWFXfddaAof6B0VhIlFg0s9GMSl68gmEHPvTbjRUcnqaDU8aHoYeKnstEfSuV6iqgv7UHmVbGU998t4LR77FUbnvRY52n8Kkp1uWQlypc_uxNV1xuzpLn6iPOnjmX4GB_9ipIhr99lLbNNmB8ORdvj5TTeWp0QmRHvxalV1hQUKku4iamKTC3ysEqMpA1o9Vb95hIdfiJ7tfQY6j51WwV9ymCx0uHrPY3eJfX30H4X8LIrzZfkqzyVnYlYqc1oTGzUaarwXfodlozvgG_2A68hORGnhjLc9rAxYwPwILJ7-alMNEU22RG5GzlA3vnw3REb4wFHnZa5kKvNUSz5m2WlXkF7eVmOaq4LjuWnvayjsqCQI51SJ07s7H2MrYmR0fArrdt_wSoGOR2mUbzmxDqrUIwVrjm35cVcbZx_vNcsvAQy-d_pZIzmY9OrsxjUckqV9zUIeKdCSYouN70hmjU0V2KreLfoCJ2RUZbENFApV2xsj5OAdUsTPHz_Cck3baFTX753d9KaqD-lZayHfTvqN4YcbgtUglkYM00WodBan-ie5IjKxGG5qvwZ8Kj5HxDrRfpxdOtdepgjWRTY2tqd5QaaxOgQ-rSniKW9zMt-FFazpNV-_akIUF5RsWVXF7R8lHTE8nsY2OMrVr2jy2Llzeg-MV5S12d02cB1h-2qsazfJIIvPKUjtYnxEYkc19Lxb1ZvUm5rx_MmsRnOsXcDIOcfD11ZTLoUVtLXXkqDrnNw9T-sRsCDk-O5Eg8iTDJfh0xiVyaXvbP9b1Jcb4mSXptGwZDHX53e_sX2IsLrURmstqTqV5HxQb0dgBij2PriWFbZKcarydTh5Exl2r4iOGYRL9vD--us_5muqq0WLf5XTjEkCyfTqF_l09SOcu7D2_l8FzXuA275UvzNplU1FV-VFAwYk2-bKOlu1OabgG28bw3AiPkCaubboGl3ObWbsw_YdiMcdn3JTPdeaoC5FaRDB_fjFqhiVE-cO77ba58MHnQvQuK4USkJrzJVVup65R_4UBv-8upTWLDkN3erXgEFwk3Qm985gexP5pCR5Y8mMgCkBuAeeXTI5wW_Z01kF_NbTEXffFmr8AEC_hjzFS26PBAWGrTYUG14iDdVLyItlBc33zbqBgDA_blUUrCSLm_NNRQqlzsRjJeMcqyZ_n5mV9CFmAOQzv4R7NBllnM70iMq6tG6JL-fhgTCqT5NZPJUS6bzutwn456iha5NWNbLshO-Lnim2wAr-Y_7nX0Gp-LrCBQAA.eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVdFU1QtVVMtcmVkaXJlY3QuYW5hbHlzaXMud2luZG93cy5uZXQiLCJlbWJlZEZlYXR1cmVzIjp7Im1vZGVybkVtYmVkIjpmYWxzZX19";
-
+  "H4sIAAAAAAAEACWUtwrsCBYF_-WlWpA3vTCBvPdemaSW994M--_bw4QXKjlFcf_-Y6VPP6XfP__903j3ysLhQU3AoOFW6F60YN3NWL92hpgOTuVS0yhIOpATnSuryVjDfECtGMpn8fomJ0ACrhmghg5j3euVqPbjEwZpRb1XVtuPBKi3rJRECZFnSFd9mCdXZiUsx3P3lg62uXVpctMRYwjsXPDdZDZT76DNu5q551W5gBYJqdto31dSYm8pHj3Kl0ZX6omkzF79Tpb7p0Qvcyg-wuu7DEqh0RWSJ3egBu04XpEUSD59zEAyA4QnksT9rWHowFLf4Q6ZQSxyCR28CJO4GVo8lXTRvsGMlayzuPbcDsp6sTh1VxFI3SAVZSO7w2rh1spmmSq_OCThER2w3Xxsyhu_TRP2PhCL2kvt3-2jcNjnUIyz7oEynDXbCmRlwdpFDVMQzCQV_r5BcczceojO8rZqd8LR6hS2swUopNqLzAd96TkkfYsDWMwjl8H-o9sxIzNxXmJI8vA9kD51MbMHhC3SSd-Q0PnayFQxOSNXfOSfShLsgjo3VrZO1jB1_egs_5PFKNl7uAx1JAFk5c5Ve8hhMUOgVt49XfIqDnVojPFlhDc8idReJZeSqoFl67kEbG_Jnc-4pPGA1jGeDsJwc--OXxrM6NdgSqMOaSlHf9dqNXn9sbep_d2-avYLV_FYDPfSmpgtKtU5Jmd3rzmz7GtCNIf4EvBFPbrlL5Qat7AT1GqwHnasASOBCoMb8ZsKw4yjR53I4__85w-7PvM-qcXzy9niCf9RHwOoQcFOyoF67-jbL7QqahkJI1C3kKaLJkrYxBHTjuE0TZeKYtGzdiJCIyn9GKjbaNlHlRkOOyu_Uj9hBpFFcnvjYq-X5KzEuuBEezIqXKUF-lq8mr8M0HqnIBPZ5qLCHhiLAxyHrec7RG2hWh3qtsOhAsq-qouZCSZqjFhYgAv6UG9QBIOt_7k-7otVQ6ILxDCntf-jrmNw7a_ReNnU-QCF1AA7sOKg1T7xixNk1xj3xmw8YjEQvUkMw7JZVvooJ6MohwfCxchfwFwoXwF4kk_aVlb4eE3LfegSb5q4qiUN3WqqjfQUVQep8tXpouZ4nJcOnGFMUXmuGO7r-uuvfzQ_c12scvCz_ClPlk3xXg4z4BnXejCghPiXcptqTPdjLX4YGzF-67_RC48lEIcEAMy2LaHzFQ3Khief7ok2A6e-m2TYhYSp2MXv9aTVtzAS9BZ9vVHhCCLOWtGseNeZadzyfoa81ze0HOHmMppkA9Pf3Ii8ANGltreYdy0is8si2GzYm0T8MCLp-KIe8GBGYvPySr4zBJL3blav3XakUtbcbD014mAkqcOma092rrFRfKumEAs6hr7dJHplFOIEtQDmjHgMJH8vnrCNBwdr4CR7_Vszdp3MY6lcOaGuvndAuZ0oI9dP1BY07JScltUS8BBWGgyv-HIIRloCJAd4sQ8I3AAdDfV7L8SgmTus2vEtJ9_vEfersSwTIVtK5xbVRNb5aNA_zf_7Px3lOdDCBQAA.eyJjbHVzdGVyVXJsIjoiaHR0cHM6Ly9XQUJJLVdFU1QtVVMtcmVkaXJlY3QuYW5hbHlzaXMud2luZG93cy5uZXQiLCJlbWJlZEZlYXR1cmVzIjp7Im1vZGVybkVtYmVkIjpmYWxzZX19";
 class EmbedChart extends React.Component {
-  constructor(props) {
-    super(props);
+  componentDidMount() {
+    state = this.props.actions.getReduxStore();
 
-    console.log(this.props);
+    if (state.charts.Token_Expiry != null) {
+      //Check if Token is about to expire
+      var utc_current_seconds = Date.parse(new Date().toUTCString());
+      var expiration_time_seconds = Date.parse(state.charts.Token_Expiry);
+      if (utc_current_seconds + 900000 >= expiration_time_seconds)
+        this.props.actions.getAccessToken();
+    }
+    //setInterval(this.getToken(), 900000);
+
+    window.addEventListener(
+      "resize",
+      debounce((e) => {
+        this.updateDimensions();
+      }, 1000)
+    );
+  }
+
+  getToken = () => {
+    let tokenInfo = new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: "9ea200b1-f838-4d71-a815-3cce93d65d25",
+      resource: "https://analysis.windows.net/powerbi/api",
+      client_secret: "E7a0u0_c_8ak0IJV6xly.5qY1kh7~F_FHR",
+    });
+    this.props.actions.getAccessToken(tokenInfo);
+  };
+
+  updateDimensions = () => {
+    //Force Update will update the CSS Prop
+    //this.forceUpdate();
+    //this.props.actions.handleLoadCharts();
+    //window.location.reload();
+    this.props.actions.renderVisualsResize();
+  };
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.updateDimensions);
   }
 
   render() {
@@ -32,11 +69,12 @@ class EmbedChart extends React.Component {
             tokenType: models.TokenType.Embed,
             permissions: models.Permissions.All,
             viewMode: models.ViewMode.viewMode,
+
             settings: {
               panes: {
                 filters: {
                   expanded: false,
-                  visible: false,
+                  visible: true,
                 },
               },
             },
@@ -49,12 +87,7 @@ class EmbedChart extends React.Component {
                   this.props.actions.loadCharts();
                 },
               ],
-              [
-                "rendered",
-                () => {
-                  console.log("rendered");
-                },
-              ],
+              ["rendered", () => {}],
               [
                 "error",
                 function (event) {
@@ -63,9 +96,12 @@ class EmbedChart extends React.Component {
               ],
             ])
           }
-          cssClassName={"report-style-class"}
+          cssClassName={
+            window.innerWidth > 1000
+              ? "report-style-class"
+              : "report-style-class-2"
+          }
           getEmbeddedComponent={(embedObject) => {
-            console.log("Embedded object  received");
             this.props.actions.getEmbeddedReport(embedObject);
           }}
         />
@@ -81,6 +117,8 @@ EmbedChart.propTypes = {
 function mapStateToProps(state) {
   return {
     report: state.report,
+    numberOfColumns: state.LayoutShowcaseState,
+    columns: state.columns,
   };
 }
 
@@ -96,6 +134,16 @@ function mapDispatchToProps(dispatch) {
         chartsActions.getEmbeddedReport,
         dispatch
       ),
+      updateLayoutColumns: bindActionCreators(
+        chartsActions.updateLayoutColumns,
+        dispatch
+      ),
+      renderVisualsResize: bindActionCreators(
+        chartsActions.renderVisualsResize,
+        dispatch
+      ),
+      getReduxStore: bindActionCreators(chartsActions.getReduxStore, dispatch),
+      getAccessToken: bindActionCreators(tokenActions.getAccessToken, dispatch),
     },
   };
 }
